@@ -1,27 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Smartphone, Cpu, Database, Battery, AlertTriangle, FileText, Camera, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Smartphone, Cpu, Database, Battery, AlertTriangle, FileText, Camera, Loader2, CheckCircle, AlertCircle, X, ImageIcon } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import brandModelsData from "@/public/brand_models.json";
 
-const BRANDS = ["Apple", "Samsung", "Google", "OnePlus", "Xiaomi", "Oppo", "Motorola", "Asus", "Sony"];
+const BRANDS = Object.keys(brandModelsData);
+type BrandName = keyof typeof brandModelsData;
+
 const RAM_OPTIONS = ["4GB", "6GB", "8GB", "12GB", "16GB", "18GB", "24GB"];
 const STORAGE_OPTIONS = ["64GB", "128GB", "256GB", "512GB", "1TB"];
 const SCREEN_CONDITIONS = ["Perfect", "Minor Scratches", "Cracked"];
 
 export default function SellPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Form state
   const [form, setForm] = useState({
-    brand: "Apple",
-    phoneModel: "",
+    brand: BRANDS[0],
+    phoneModel: brandModelsData[BRANDS[0] as BrandName][0] || "",
     ram: "8GB",
     storage: "128GB",
     daysUsed: "",
@@ -49,7 +53,58 @@ export default function SellPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    
+    // If brand changes, we must reset the phoneModel to the first available model for that new brand
+    if (name === "brand") {
+      const newModels = brandModelsData[value as BrandName] || [];
+      setForm((prev) => ({ 
+        ...prev, 
+        brand: value, 
+        phoneModel: newModels.length > 0 ? newModels[0] : "" 
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setStatus({ type: "error", text: "Please select a valid image file." });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      setStatus({ type: "error", text: "Image is too large. Maximum size is 5MB." });
+      return;
+    }
+
+    setIsUploading(true);
+    setStatus(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload image.");
+      }
+
+      setForm((prev) => ({ ...prev, photo: data.url }));
+    } catch (err: any) {
+      setStatus({ type: "error", text: err.message });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,15 +189,20 @@ export default function SellPage() {
                   {/* Model */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-white/60">Model Name</label>
-                    <input
-                      type="text"
+                    <select
                       name="phoneModel"
                       required
-                      placeholder="e.g. iPhone 15 Pro Max"
                       value={form.phoneModel}
                       onChange={handleChange}
-                      className="block w-full px-4 py-3 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 transition-all"
-                    />
+                      className="block w-full px-4 py-3 bg-black/40 border border-white/10 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 transition-all appearance-none cursor-pointer"
+                    >
+                      {form.brand && brandModelsData[form.brand as BrandName]
+                        ? brandModelsData[form.brand as BrandName].map(model => (
+                            <option key={model} value={model}>{model}</option>
+                          ))
+                        : <option value={form.phoneModel}>{form.phoneModel}</option>
+                      }
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -180,17 +240,54 @@ export default function SellPage() {
                     <h3 className="font-bold text-lg">Visuals</h3>
                   </div>
 
-                  {/* Photo URL */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-white/60">Photo URL</label>
+                  {/* Image Upload Area */}
+                  <div className="space-y-4">
+                    <label className="text-sm font-medium text-white/60">Device Photo</label>
                     <input
-                      type="url"
-                      name="photo"
-                      placeholder="https://example.com/phone.jpg"
-                      value={form.photo}
-                      onChange={handleChange}
-                      className="block w-full px-4 py-3 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[#00E5FF]/40 transition-all"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
                     />
+                    
+                    {form.photo ? (
+                      <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-white/10 group bg-black/40">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={form.photo} 
+                          alt="Device preview" 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, photo: "" }))}
+                          className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur-md transition-colors border border-white/10 z-10 cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-48 rounded-2xl border-2 border-dashed border-white/20 hover:border-[#00E5FF]/50 hover:bg-[#00E5FF]/5 transition-all flex flex-col items-center justify-center gap-3 cursor-pointer bg-black/20"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-8 h-8 text-[#00E5FF] animate-spin mb-2" />
+                            <p className="text-sm font-medium text-white/70">Uploading image...</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-1 group-hover:bg-white/10 transition-colors">
+                              <ImageIcon className="text-white/40" size={24} />
+                            </div>
+                            <p className="text-sm font-medium text-white/80">Click to upload photo</p>
+                            <p className="text-xs text-white/40">PNG, JPG, WEBP up to 5MB</p>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -285,8 +382,8 @@ export default function SellPage() {
               <div className="p-6 rounded-3xl bg-blue-600/10 border border-blue-500/20 flex items-start gap-4">
                 <AlertTriangle className="text-blue-400 shrink-0 mt-1" size={20} />
                 <p className="text-sm text-white/60 leading-relaxed">
-                  By submitting, you confirm that all details provided are accurate. Misleading information may lead to account suspension. 
-                  Price is currently set to <span className="text-white font-bold">Rs. 0</span> and will be updated by our evaluation model.
+                  By submitting, you confirm that all details provided are accurate. Misleading information may lead to account suspension
+                      and price   will be updated by our evaluation model.
                 </p>
               </div>
 
@@ -324,8 +421,6 @@ export default function SellPage() {
           </form>
         </motion.div>
       </main>
-
-      <Footer />
     </div>
   );
 }

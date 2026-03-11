@@ -3,7 +3,7 @@ import React, { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 
 const BRANDS = [
-  "Apple", "Samsung", "Google", "OnePlus", "Xiaomi", "Oppo", "Vivo", "Sony", "Asus", "Motorola"
+  "Apple", "Samsung", "Google", "OnePlus", "Xiaomi", "Oppo", "Vivo", "Sony"
 ];
 
 // Duplicate the array to create a seamless infinite loop

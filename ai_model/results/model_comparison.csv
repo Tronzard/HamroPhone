@@ -1,0 +1,6 @@
+Model,R2_Score,MAE_NPR,RMSE_NPR,Best_Params,Train_Time_s
+Gradient Boosting,0.9889,1033.0,2324.0,"{'regressor__learning_rate': 0.1, 'regressor__max_depth': 3, 'regressor__n_estimators': 200}",8.1
+Random Forest,0.9794,1368.0,3163.0,"{'regressor__max_depth': None, 'regressor__min_samples_split': 2, 'regressor__n_estimators': 200}",11.74
+Linear Regression,0.7954,6229.0,9969.0,{'regressor__fit_intercept': True},5.57
+Ridge Regression,0.7924,6104.0,10042.0,"{'regressor__alpha': 100.0, 'regressor__fit_intercept': True}",4.97
+SVR,0.163,7750.0,20164.0,"{'regressor__C': 100.0, 'regressor__epsilon': 0.2, 'regressor__kernel': 'rbf'}",1.31

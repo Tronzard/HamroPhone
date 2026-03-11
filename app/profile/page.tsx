@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Phone, Lock, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, ShoppingBag, Trash2, Smartphone, Battery, Calendar } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 
 interface UserData {
   _id: string;
@@ -390,8 +389,6 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </main>
-
-      <Footer />
     </div>
   );
 }
